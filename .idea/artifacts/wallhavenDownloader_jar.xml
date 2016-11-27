@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="wallhavenDownloader:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/wallhavenDownloader_jar</output-path>
+    <root id="archive" name="wallhavenDownloader.jar">
+      <element id="module-output" name="wallhavenDownloader" />
+    </root>
+  </artifact>
+</component>
