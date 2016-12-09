@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
+import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
@@ -49,12 +49,26 @@ class wallhaven {
         return paramList;
     }
 
+
+    public static boolean imagExists(String URLName){
+        try {
+            HttpURLConnection.setFollowRedirects(false);
+            HttpURLConnection con =
+                    (HttpURLConnection) new URL(URLName).openConnection();
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:50.0) " + "Gecko/20100101 Firefox/50.0");
+            con.setRequestMethod("HEAD");
+            return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static List<String> getImgs(String[] paramList) throws IOException {
 
         int count = 1, nPages = Integer.parseInt(paramList[1]);
-        List<String> tagList;
-        List<String> tempList;
-        List<String> linkList = new ArrayList<>();
+        List<String> tagList = null;
         File downloadDir = new File(paramList[6]);
         Scanner input = new Scanner(System.in);
 
@@ -74,7 +88,7 @@ class wallhaven {
             }
         }
 
-        // If enabled, clean the specified dir
+        //If enabled, clean the specified dir
         if (paramList[5].equals("yes")) {
             FileUtils.cleanDirectory(downloadDir);
         }
@@ -142,23 +156,35 @@ class wallhaven {
                 Elements previewClass = userAgent.doc.findEach("<a class=\"preview\"");
                 tagList = previewClass.findAttributeValues("<a href>");
 
-                for (int j = 0; j < tagList.size(); j++, count++) {
-                    userAgent.visit(tagList.get(j));
-                    Elements imgTag = userAgent.doc.findEach("<img id=\"wallpaper\"");
-                    tempList = imgTag.findAttributeValues("<img src>");
-                    linkList.add(tempList.get(0));
-                    System.out.println("Image " +count + ": " +linkList.get(j));
-                    try {
-                        String linkName = linkList.get(j);
-                        linkName = linkName.substring(48, linkName.length());
-                        File picutreFile = new File(paramList[6].concat(linkName));
+                String linkName, linkID, imgName = "wallhaven-";
+                String baseURL = "https://wallpapers.wallhaven.cc/wallpapers/full/wallhaven-";
 
-                        if (!picutreFile.exists()) {
-                            URL imageURL = new URL(linkList.get(j));
+                for (int j = 0; j < tagList.size(); j++, count++) {
+                    boolean isPNG = false;
+                    linkName = tagList.get(j);
+                    linkID   = linkName.substring(37, linkName.length());
+                    linkName = baseURL.concat(linkID).concat(".jpg");
+
+                    if (!imagExists(linkName)) {
+                        linkName = baseURL.concat(linkID).concat(".png");
+                        isPNG = true;
+                    }
+
+                    System.out.println("Image " +count + ": " +linkName);
+                    try {
+                        File pictureFile = null;
+                        if (isPNG) {
+                            pictureFile = new File(paramList[6].concat(imgName).concat(linkID).concat(".png"));
+                        } else {
+                            pictureFile = new File(paramList[6].concat(imgName).concat(linkID).concat(".jpg"));
+                        }
+
+                        if (!pictureFile.exists()) {
+                            URL imageURL = new URL(linkName);
                             URLConnection conn = imageURL.openConnection();
                             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:50.0) " + "Gecko/20100101 Firefox/50.0");
                             conn.connect();
-                            FileUtils.copyInputStreamToFile(conn.getInputStream(), picutreFile);
+                            FileUtils.copyInputStreamToFile(conn.getInputStream(), pictureFile);
                             System.out.println(linkName + " downloaded");
                             System.out.println("");
                         } else {
@@ -172,6 +198,6 @@ class wallhaven {
                 System.err.println();
             }
         }
-        return linkList;
+        return tagList;
     }
 }
